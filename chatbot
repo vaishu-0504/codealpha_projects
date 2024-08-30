@@ -1,0 +1,54 @@
+import nltk
+from nltk.corpus import stopwords
+from nltk.stem import WordNetLemmatizer
+from sklearn.feature_extraction.text import TfidfVectorizer
+
+def summarize_text(text, summary_length):
+    # Ensure the necessary NLTK data files are downloaded
+    nltk.download('punkt')
+    nltk.download('stopwords')
+    nltk.download('wordnet')
+
+    # Tokenize sentences
+
+    sentences = nltk.sent_tokenize(text)     # this line of code converts the text into sentences
+    if len(sentences) <= summary_length:
+        return text                          # Return original text if it's shorter than the summary length
+
+    # Tokenize words in each sentence
+
+    tokenized_sentences = [nltk.word_tokenize(sentence) for sentence in sentences]  # this line of code converts sentences into words
+
+    # Remove stopwords
+
+    stop_words = set(stopwords.words('english'))
+    filtered_sentences = [[word for word in sentence if word.lower() not in stop_words] for sentence in tokenized_sentences] #This step filters out common words that don't add much meaning to the text (e.g., "and", "the", "is").
+
+    # Lemmatize words
+
+    lemmatizer = WordNetLemmatizer()
+    lemmatized_sentences = [' '.join([lemmatizer.lemmatize(word) for word in sentence]) for sentence in filtered_sentences] #Lemmatization reduces words to their root form (e.g., "running" to "run"), which helps in reducing the dimensionality of the text data and improving the quality of TF-IDF vectors.
+
+    # Compute TF-IDF vectors
+
+    vectorizer = TfidfVectorizer()
+    tfidf_vectors = vectorizer.fit_transform(lemmatized_sentences) #This step converts the processed text into numerical vectors that represent the importance of each word in the context of the entire text.
+
+    # Compute average scores for each sentence
+
+    average_scores = tfidf_vectors.mean(axis=1).A1
+
+    # Rank sentences by their average scores
+
+    ranked_sentences = sorted(zip(average_scores, sentences), reverse=True, key=lambda x: x[0]) #This ranks the sentences based on their average TF-IDF scores, with higher scores indicating more important sentences.
+
+    # Generate summary
+    summary = ' '.join([sentence for score, sentence in ranked_sentences[:summary_length]])
+    return summary        #The top-ranked sentences are combined to form the summary, ensuring that the most important information is included.
+
+text = input("Enter the text you want to summarize:\n") # getting input from the user for the text that needs to be summerized
+
+summary_length = int(input("Enter the summary length (number of sentences): ")) # getting input from the user for the no of lines that must be summerized
+summary = summarize_text(text, summary_length) # calling the funtion summarize_text
+
+print(summary) #printing the returned summary
